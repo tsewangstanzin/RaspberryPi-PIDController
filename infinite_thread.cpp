@@ -2,6 +2,9 @@
 
 #include "infinite_thread.h"
 #include "portablesleep.h"
+
+
+#include "mainwindow.h"
 #include <slalib.h>
 #include <slamac.h>
 #include<string.h>
@@ -31,15 +34,23 @@ PID myPID(&input, &output, &setpoint, kp, ki, kd, DIRECT);
 
 using namespace std;
 
+QString current_time= QTime::currentTime().toString("hhmmss");
+ QString current_date= QDate::currentDate().toString();
+ QString filename=current_time+current_date+"pidLogging.txt";
+
+ QFile file(filename);
+
 
 InfiniteCountWorker::InfiniteCountWorker(double Gora, double Godec)
     :m_running(true)
 
 {
-    current_time= QTime::currentTime().toString("hhmmss");
-    current_date= QDate::currentDate().toString();
-    filename=current_time+current_date+"DECLogging";
-    filename2=current_time+current_date+"RALogging";
+    //current_time= QTime::currentTime().toString("hhmmss");
+    //current_date= QDate::currentDate().toString();
+    //filename=current_time+current_date+"DECLogging";
+    //filename2=current_time+current_date+"RALogging";
+
+     timer2.start();
     rr=Gora;
     dd=Godec;
     serial = new QSerialPort(this);
@@ -246,7 +257,7 @@ void InfiniteCountWorker::Coord(double Gora, double Godec)
        int min = (int)frac ;
        frac = frac - (double)min ;
        // fix the DDD MM 60 case
-       // TODO: nearbyint isn’t alway available (Visual C++,
+       // TODO: nearbyint isnâ€™t alway available (Visual C++,
        //       for example)
        double sec = nearbyint(frac * 600000.0) ;
        sec /= 10000.0 ;
@@ -283,7 +294,7 @@ void InfiniteCountWorker::Coord(double Gora, double Godec)
      int min2 = (int)frac2 ;
      frac2 = frac2 - (double)min2 ;
      // fix the DDD MM 60 case
-     // TODO: nearbyint isn’t alway available (Visual C++,
+     // TODO: nearbyint isnâ€™t alway available (Visual C++,
      //       for example)
      double sec2 = nearbyint(frac2 * 600000.0) ;
      sec2 /= 10000.0 ;
@@ -364,7 +375,7 @@ QByteArray InfiniteCountWorker::readSerialAzimuthEncoder()
       //pp=serial->readAll();
      parsed_data= serial->readAll();
     //input = serial.readAll();
-     QFile file(filename);
+     /*QFile file(filename);
            if(file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text))
            {
                // We're going to streaming text to the file
@@ -374,7 +385,7 @@ QByteArray InfiniteCountWorker::readSerialAzimuthEncoder()
 
                file.close();
                //qDebug() << "Writing finished";
-           }
+           }*/
 
   return parsed_data;
     //qDebug()<<parsed_data;
@@ -406,7 +417,7 @@ void InfiniteCountWorker::readSerialAzimuthEncoder2()
 
 
 
-    QFile file(filename2);
+    /*QFile file(filename2);
 
     //QFile file("/home/tsewang/encoder2-data-log.txt");
 
@@ -420,6 +431,7 @@ void InfiniteCountWorker::readSerialAzimuthEncoder2()
               file.close();
               //qDebug() << "Writing finished"<<parsed_data<<"\n";
           }
+          */
 
 }
 
@@ -427,6 +439,11 @@ void InfiniteCountWorker::readSerialAzimuthEncoder2()
 void InfiniteCountWorker::PID_loop()
 {
 
+
+
+
+
+    //lastTime = timer.elapsed()-SampleTime;
     QByteArray QencoderValue= parsed_data;
        // qDebug()<< QencoderValue;
 
@@ -437,9 +454,9 @@ void InfiniteCountWorker::PID_loop()
    qDebug()<< "Feedback enc. value       " <<encoderValue;
 
   myPID.SetMode(AUTOMATIC);
-  myPID.SetSampleTime(1);
+  myPID.SetSampleTime(1);   //ms
  //softPwmCreate(MotorEnableDC1,0,100);
-  myPID.SetOutputLimits(-1024, 1024); // this is the MAX PWM value to move motor, here change in value reflect change in speed of motor.
+  myPID.SetOutputLimits(-500, 500); // this is the MAX PWM value to move motor, here change in value reflect change in speed of motor.
 
 
 
@@ -466,6 +483,19 @@ input = encoderValue ;
 
   myPID.Compute();
   pwmOut(output);
+
+
+
+        if(file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text))
+        {
+            // We're going to streaming text to the file
+            QTextStream stream(&file);
+
+            stream<<timer2.elapsed()<<"\t"<<input<<"\t"<<output<<"\t"<<setpoint<<'\n';
+
+            file.close();
+            //qDebug() << "Writing finished";
+        }
 
 }
 
